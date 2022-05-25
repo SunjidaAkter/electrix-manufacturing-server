@@ -47,10 +47,31 @@ async function run() {
         const reviewCollection = client.db("assignmentTwelfth").collection("review");
         const userCollection = client.db('assignmentTwelfth').collection('user');
         const newsCollection = client.db('assignmentTwelfth').collection('news');
+        const orderCollection = client.db('assignmentTwelfth').collection('order');
 
+
+        const verifyAdmin = async (req, res, next) => {
+            const requester = req.decoded.email;
+            const requesterAccount = await userCollection.findOne({ email: requester });
+            if (requesterAccount.role === 'admin') {
+                next();
+            }
+            else {
+                res.status(403).send({ message: 'forbidden' });
+            }
+        }
+
+
+
+        app.post("/order", async (req, res) => {
+            const doc = req.body;
+            const result = await orderCollection.insertOne(doc);
+            res.send(result);
+        });
 
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
+            const name = req.params.name;
             const user = req.body;
             const filter = { email: email };
             const options = { upsert: true };
@@ -62,11 +83,29 @@ async function run() {
             res.send({ result, token });
         });
 
+
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await userCollection.findOne({ email: email });
+            const isAdmin = user.role === 'admin';
+            res.send({ admin: isAdmin })
+        })
+
+
         app.get('/tool', async (req, res) => {
             const query = {};
             const cursor = toolCollection.find(query);
             const tools = await cursor.toArray();
             res.send(tools);
+        })
+
+
+        app.get('/tool/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await toolCollection.findOne(query);
+            res.send(result);
+
         })
 
 
